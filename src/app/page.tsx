@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AppHeader } from '@/components/app/header';
-import { SubjectList } from '@/components/app/subject-list';
-import { TopicSidebar } from '@/components/app/topic-sidebar';
-import { SubjectFormDialog } from '@/components/app/subject-form-dialog';
+import { AppHeader } from '@/app/components/app/header';
+import { SubjectList } from '@/app/components/app/subject-list';
+import { TopicSidebar } from '@/app/components/app/topic-sidebar';
+import { SubjectFormDialog } from '@/app/components/app/subject-form-dialog';
 import { initialSubjects } from '@/lib/data';
 import type { Subject, Topic } from '@/lib/types';
 import {
