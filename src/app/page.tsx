@@ -105,11 +105,13 @@ export default function Home() {
 
   return (
     <div className="flex h-dvh bg-background">
-      <TopicSidebar
-        subject={selectedSubject}
-        onTopicsChange={handleTopicUpdate}
-        className="hidden md:flex flex-col w-80 lg:w-96 border-r bg-card"
-      />
+      <div className="hidden md:flex">
+        <TopicSidebar
+          subject={selectedSubject}
+          onTopicsChange={handleTopicUpdate}
+          className="w-80 lg:w-96 border-r bg-card flex-col"
+        />
+      </div>
       <main className="flex-1 flex flex-col overflow-hidden">
         <AppHeader 
           onAddSubject={handleAddSubjectClick} 
