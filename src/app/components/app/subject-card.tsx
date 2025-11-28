@@ -34,6 +34,7 @@ export function SubjectCard({ subject, isSelected, onSelect, onEdit, onDelete }:
         isSelected ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-border bg-card'
       )}
       style={{ '--subject-color': subject.color } as React.CSSProperties}
+      onClick={onSelect}
     >
       <div className="h-2 w-full bg-[var(--subject-color)] rounded-t-lg" />
       <CardHeader className="flex-row items-start gap-4 space-y-0">
@@ -43,7 +44,7 @@ export function SubjectCard({ subject, isSelected, onSelect, onEdit, onDelete }:
         </div>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 -mt-1 -mr-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 -mt-1 -mr-1" onClick={(e) => e.stopPropagation()}>
                     <MoreVertical className="h-4 w-4" />
                     <span className="sr-only">More options</span>
                 </Button>
@@ -71,9 +72,9 @@ export function SubjectCard({ subject, isSelected, onSelect, onEdit, onDelete }:
           {completedTopics} of {totalTopics} topics completed
         </div>
       </CardContent>
-      <CardFooter>
-        <Button variant={isSelected ? 'default' : 'outline'} className="w-full" onClick={onSelect}>
-          {isSelected ? 'Selected' : 'View Topics'}
+      <CardFooter className="md:hidden">
+        <Button variant={isSelected ? 'default' : 'outline'} className="w-full">
+          View Topics
         </Button>
       </CardFooter>
     </Card>

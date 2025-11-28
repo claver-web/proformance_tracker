@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { AppHeader } from '@/app/components/app/header';
 import { SubjectList } from '@/app/components/app/subject-list';
 import { TopicSidebar } from '@/app/components/app/topic-sidebar';
@@ -17,7 +19,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 export default function Home() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -25,8 +26,9 @@ export default function Home() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [subjectToEdit, setSubjectToEdit] = useState<Subject | undefined>(undefined);
   const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
-  const [isTopicSidebarOpenOnMobile, setIsTopicSidebarOpenOnMobile] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Load from local storage or initial data
@@ -46,13 +48,21 @@ export default function Home() {
       if (selectedSubject) {
         const updatedSelected = subjects.find(s => s.id === selectedSubject.id);
         setSelectedSubject(updatedSelected || null);
-      } else if (subjects.length > 0) {
+      } else if (subjects.length > 0 && !isMobile) {
         setSelectedSubject(subjects[0]);
       } else {
         setSelectedSubject(null);
       }
     }
-  }, [subjects, isMounted]);
+  }, [subjects, isMounted, isMobile]);
+
+  const handleSelectSubject = (subject: Subject) => {
+    if (isMobile) {
+      router.push(`/subject/${subject.id}`);
+    } else {
+      setSelectedSubject(subject);
+    }
+  };
 
   const handleAddSubjectClick = () => {
     setSubjectToEdit(undefined);
@@ -84,7 +94,7 @@ export default function Home() {
       setSubjects(subjects.map((s) => s.id === subjectData.id ? subjectData : s));
     } else {
       setSubjects([...subjects, subjectData]);
-      if (!selectedSubject) {
+      if (!selectedSubject && !isMobile) {
         setSelectedSubject(subjectData);
       }
     }
@@ -113,16 +123,12 @@ export default function Home() {
         />
       </div>
       <main className="flex-1 flex flex-col overflow-hidden">
-        <AppHeader 
-          onAddSubject={handleAddSubjectClick} 
-          onToggleSidebar={() => setIsTopicSidebarOpenOnMobile(true)}
-          hasSelectedSubject={!!selectedSubject}
-        />
+        <AppHeader onAddSubject={handleAddSubjectClick} />
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <SubjectList
             subjects={subjects}
             selectedSubject={selectedSubject}
-            onSelectSubject={setSelectedSubject}
+            onSelectSubject={handleSelectSubject}
             onEditSubject={handleEditSubject}
             onDeleteSubject={handleDeleteSubject}
           />
@@ -153,16 +159,6 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Sheet open={isTopicSidebarOpenOnMobile} onOpenChange={setIsTopicSidebarOpenOnMobile}>
-        <SheetContent side="left" className="w-80 p-0 flex flex-col bg-card border-r">
-          <TopicSidebar
-            subject={selectedSubject}
-            onTopicsChange={handleTopicUpdate}
-            className="flex flex-col h-full"
-          />
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
