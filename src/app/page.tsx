@@ -7,7 +7,6 @@ import { AppHeader } from '@/app/components/app/header';
 import { SubjectList } from '@/app/components/app/subject-list';
 import { TopicSidebar } from '@/app/components/app/topic-sidebar';
 import { SubjectFormDialog } from '@/app/components/app/subject-form-dialog';
-import { initialSubjects } from '@/lib/data';
 import type { Subject, Topic } from '@/lib/types';
 import {
   AlertDialog,
@@ -19,6 +18,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useUser } from '@/firebase';
+import { addSubject, deleteSubject, getSubjects, updateSubject } from '@/firebase/firestore/subjects';
+import { useToast } from '@/hooks/use-toast';
+import { initialSubjects } from '@/lib/data';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -29,31 +33,55 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { user, loading: userLoading } = useUser();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Load from local storage or initial data
-    const savedSubjects = localStorage.getItem('eduplanner-subjects');
-    if (savedSubjects) {
-      setSubjects(JSON.parse(savedSubjects));
-    } else {
-      setSubjects(initialSubjects);
+    if (!userLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, userLoading, router]);
+
+  useEffect(() => {
+    if (user) {
+      getSubjects(user.uid)
+        .then(userSubjects => {
+          if(userSubjects.length === 0) {
+            // If no subjects, load initial subjects for new user
+            const seededSubjects = initialSubjects.map(subject => ({...subject, id: `${user.uid}-${subject.id}`}))
+            seededSubjects.forEach(subject => {
+                addSubject(user.uid, subject);
+            });
+            setSubjects(seededSubjects);
+          } else {
+            setSubjects(userSubjects);
+          }
+        })
+        .catch(err => {
+          console.error("Error fetching subjects: ", err);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not fetch subjects.",
+          });
+        });
     }
     setIsMounted(true);
-  }, []);
+  }, [user, toast]);
 
   useEffect(() => {
     if (isMounted) {
-      localStorage.setItem('eduplanner-subjects', JSON.stringify(subjects));
       // Update selected subject with fresh data from subjects array
       if (selectedSubject) {
         const updatedSelected = subjects.find(s => s.id === selectedSubject.id);
         setSelectedSubject(updatedSelected || null);
       } else if (subjects.length > 0 && !isMobile) {
         setSelectedSubject(subjects[0]);
-      } else {
+      } else if (!isMobile) {
         setSelectedSubject(null);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjects, isMounted, isMobile]);
 
   const handleSelectSubject = (subject: Subject) => {
@@ -78,44 +106,58 @@ export default function Home() {
     setSubjectToDelete(subject);
   };
 
-  const confirmDelete = () => {
-    if (subjectToDelete) {
-      setSubjects(subjects.filter((s) => s.id !== subjectToDelete.id));
+  const confirmDelete = async () => {
+    if (subjectToDelete && user) {
+      await deleteSubject(user.uid, subjectToDelete.id);
+      const newSubjects = subjects.filter((s) => s.id !== subjectToDelete.id);
+      setSubjects(newSubjects);
+
       if (selectedSubject?.id === subjectToDelete.id) {
-        const remainingSubjects = subjects.filter((s) => s.id !== subjectToDelete.id);
-        setSelectedSubject(remainingSubjects.length > 0 ? remainingSubjects[0] : null);
+        setSelectedSubject(newSubjects.length > 0 ? newSubjects[0] : null);
       }
       setSubjectToDelete(null);
+      toast({ title: 'Subject deleted' });
     }
   };
 
-  const handleFormSave = (subjectData: Subject) => {
-    if (subjectToEdit) {
-      setSubjects(subjects.map((s) => s.id === subjectData.id ? subjectData : s));
-    } else {
-      setSubjects([...subjects, subjectData]);
-      if (!selectedSubject && !isMobile) {
-        setSelectedSubject(subjectData);
-      }
+  const handleFormSave = async (subjectData: Subject) => {
+    if (user) {
+        if (subjectToEdit) {
+            await updateSubject(user.uid, subjectData);
+            setSubjects(subjects.map((s) => s.id === subjectData.id ? subjectData : s));
+        } else {
+            const newSubject = {...subjectData, id: `${user.uid}-${Date.now()}`};
+            await addSubject(user.uid, newSubject);
+            const newSubjects = [...subjects, newSubject];
+            setSubjects(newSubjects);
+            if (!selectedSubject && !isMobile) {
+                setSelectedSubject(newSubject);
+            }
+        }
     }
     setIsFormOpen(false);
     setSubjectToEdit(undefined);
   };
 
-  const handleTopicUpdate = (updatedTopics: Topic[]) => {
-    if (selectedSubject) {
+  const handleTopicUpdate = async (updatedTopics: Topic[]) => {
+    if (selectedSubject && user) {
       const updatedSubject = { ...selectedSubject, topics: updatedTopics };
+      await updateSubject(user.uid, updatedSubject);
       setSubjects(subjects.map((s) => (s.id === updatedSubject.id ? updatedSubject : s)));
     }
   };
 
-  if (!isMounted) {
-    return null; // or a loading spinner
+  if (userLoading || !isMounted || !user) {
+    return (
+        <div className="flex h-dvh w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
   }
 
   return (
     <div className="flex h-dvh bg-background">
-      <div className="hidden md:flex">
+      <div className="hidden md:flex flex-col">
         <TopicSidebar
           subject={selectedSubject}
           onTopicsChange={handleTopicUpdate}

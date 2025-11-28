@@ -5,8 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import type { Subject, Topic } from '@/lib/types';
 import { TopicSidebar } from '@/app/components/app/topic-sidebar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUser } from '@/firebase';
+import { getSubjects, updateSubject } from '@/firebase/firestore/subjects';
 
 export default function SubjectPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -15,44 +17,47 @@ export default function SubjectPage() {
   const params = useParams();
   const router = useRouter();
   const { id } = params;
+  const { user, loading: userLoading } = useUser();
 
   useEffect(() => {
-    const savedSubjects = localStorage.getItem('eduplanner-subjects');
-    if (savedSubjects) {
-      const parsedSubjects = JSON.parse(savedSubjects);
-      setSubjects(parsedSubjects);
-      const currentSubject = parsedSubjects.find((s: Subject) => s.id === id);
-      setSubject(currentSubject || null);
+    if (!userLoading && !user) {
+        router.push('/login');
+    }
+  }, [user, userLoading, router]);
+
+  useEffect(() => {
+    if (user && id) {
+        getSubjects(user.uid).then(userSubjects => {
+            setSubjects(userSubjects);
+            const currentSubject = userSubjects.find((s: Subject) => s.id === id);
+            setSubject(currentSubject || null);
+        });
     }
     setIsMounted(true);
-  }, [id]);
+  }, [id, user]);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem('eduplanner-subjects', JSON.stringify(subjects));
-      if (id) {
-         const currentSubject = subjects.find((s: Subject) => s.id === id);
-         setSubject(currentSubject || null);
-      }
-    }
-  }, [subjects, isMounted, id]);
-
-
-  const handleTopicsChange = (updatedTopics: Topic[]) => {
-    if (subject) {
+  const handleTopicsChange = async (updatedTopics: Topic[]) => {
+    if (subject && user) {
       const updatedSubject = { ...subject, topics: updatedTopics };
+      await updateSubject(user.uid, updatedSubject);
       setSubjects(subjects.map((s) => (s.id === updatedSubject.id ? updatedSubject : s)));
+      setSubject(updatedSubject);
     }
   };
 
-  if (!isMounted) {
+  if (!isMounted || userLoading || !subject) {
     return (
-      <div className="p-4 pt-6">
-        <Skeleton className="h-8 w-32 mb-2" />
-        <Skeleton className="h-4 w-full mb-6" />
-        <div className="space-y-2">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-        </div>
+      <div className="flex items-center justify-center h-dvh">
+        {
+            userLoading || !isMounted ? <Loader2 className="h-8 w-8 animate-spin" /> :
+            <div className="p-4 pt-6 w-full">
+                <Skeleton className="h-8 w-32 mb-2" />
+                <Skeleton className="h-4 w-full mb-6" />
+                <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+            </div>
+        }
       </div>
     )
   }

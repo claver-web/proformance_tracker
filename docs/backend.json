@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents a user's profile information.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's unique ID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's profile picture."
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "A subject of study.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the subject."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the subject."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the subject."
+        },
+        "color": {
+            "type": "string",
+            "description": "A color associated with the subject."
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/backend/entities/Topic"
+          }
+        }
+      },
+      "required": ["id", "title", "description", "topics", "color"]
+    },
+    "Topic": {
+      "title": "Topic",
+      "description": "A topic within a subject.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the topic."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the topic."
+        },
+        "isCompleted": {
+          "type": "boolean",
+          "description": "Whether the topic has been completed."
+        }
+      },
+      "required": ["id", "title", "isCompleted"]
+    }
+  },
+  "auth": {
+    "providers": ["anonymous", "google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/backend/entities/UserProfile"
+      },
+      "description": "Stores user profile information."
+    },
+    "/users/{userId}/subjects/{subjectId}": {
+        "schema": {
+            "$ref": "#/backend/entities/Subject"
+        },
+        "description": "Stores subjects for each user."
+    }
+  }
+}
